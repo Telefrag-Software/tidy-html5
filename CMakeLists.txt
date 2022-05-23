@@ -19,11 +19,13 @@
 
 cmake_minimum_required (VERSION 2.8.12)
 
+cmake_policy(SET CMP0048 NEW)
+
 set(LIB_NAME tidy)
 set(LIBTIDY_DESCRIPTION "${LIB_NAME} - HTML syntax checker")
 set(LIBTIDY_URL "http://www.html-tidy.org")
 
-project (${LIB_NAME})
+project (${LIB_NAME} VERSION 5.8.0 LANGUAGES C)
 
 
 #################################################
@@ -397,6 +399,8 @@ endif ()
 # Static Library
 #   The static library always builds.
 #------------------------------------------------------------------------
+include(GNUInstallDirs)
+set(TARGETS_EXPORT_NAME "${PROJECT_NAME}Targets")
 set(name tidy-static)
 add_library ( ${name} STATIC ${CFILES} ${HFILES} ${LIBHFILES} )
 if (WIN32)
@@ -411,11 +415,13 @@ if (NOT TIDY_CONSOLE_SHARED) # user wants default static linkage
     list ( APPEND add_LIBS ${name} )
 endif ()    
 install(TARGETS ${name}
-        RUNTIME DESTINATION ${BIN_INSTALL_DIR}
-        ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
-        LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+        EXPORT ${TARGETS_EXPORT_NAME}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         )
-install( FILES ${HFILES} DESTINATION ${INCLUDE_INSTALL_DIR} )
+install( FILES ${HFILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME} )
 if(MSVC)
     # install(FILES $<TARGET_PDB_FILE:${name}> DESTINATION lib OPTIONAL)
     INSTALL(FILES ${PROJECT_BINARY_DIR}/${name}.dir/Debug/${name}.pdb
@@ -699,5 +705,39 @@ install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/${LIB_NAME}.pc"
     DESTINATION "${LIB_INSTALL_DIR}/pkgconfig"
     )
+
+#------------------------------------------------------------------------
+# Export
+#------------------------------------------------------------------------
+
+include(CMakePackageConfigHelpers)
+
+set(CONFIG_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
+set(GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+set(VERSION_CONFIG "${GENERATED_DIR}/${PROJECT_NAME}ConfigVersion.cmake")
+set(PROJECT_CONFIG "${GENERATED_DIR}/${PROJECT_NAME}Config.cmake")
+set(TARGETS_EXPORT_NAME "${PROJECT_NAME}Targets")
+set(NAMESPACE "${PROJECT_NAME}::")
+
+write_basic_package_version_file(
+    "${VERSION_CONFIG}" COMPATIBILITY SameMajorVersion
+)
+
+configure_package_config_file(
+    "Config.cmake.in"
+    "${PROJECT_CONFIG}"
+    INSTALL_DESTINATION "${CONFIG_INSTALL_DIR}"
+)
+
+install(
+    FILES "${PROJECT_CONFIG}" "${VERSION_CONFIG}"
+    DESTINATION "${CONFIG_INSTALL_DIR}"
+)
+
+install(
+    EXPORT "${TARGETS_EXPORT_NAME}"
+    NAMESPACE "${NAMESPACE}"
+    DESTINATION "${CONFIG_INSTALL_DIR}"
+)
 
 # eof
