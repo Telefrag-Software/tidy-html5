@@ -158,14 +158,18 @@ endif ()
 #   Enable building with logs, some memory diagnostics.
 #------------------------------------------------------------------------
 option( ENABLE_DEBUG_LOG    "Set ON to output debugging messages."          OFF )
+option( DISABLE_DEBUG_LOG   "Set ON to force disable debug messages."       OFF )
 option( ENABLE_ALLOC_DEBUG  "Set ON to output node allocation diagnostics." OFF )
 option( ENABLE_MEMORY_DEBUG "Set ON to output some memory diagnostics."     OFF )
 
-if ( ENABLE_DEBUG_LOG )
+if ( DISABLE_DEBUG_LOG )
+    add_definitions( -DDISABLE_DEBUG_LOG )
+    message(STATUS "*** Debug Logging is disabled.")
+elseif ( ENABLE_DEBUG_LOG )
     add_definitions( -DENABLE_DEBUG_LOG )
-    message(STATUS "*** Debug Logging is enabled.")  
+    message(STATUS "*** Debug Logging is enabled.")
 else ()
-    message(STATUS "*** Debug Logging is NOT enabled.")  
+    message(STATUS "*** Debug Logging is NOT enabled.")
 endif ()
 
 if (ENABLE_ALLOC_DEBUG)
