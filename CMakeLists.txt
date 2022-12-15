@@ -429,7 +429,7 @@ install( FILES ${HFILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
 if(MSVC)
     # install(FILES $<TARGET_PDB_FILE:${name}> DESTINATION lib OPTIONAL)
     INSTALL(FILES ${PROJECT_BINARY_DIR}/${name}.dir/Debug/${name}.pdb
-    DESTINATION lib CONFIGURATIONS Debug )
+    DESTINATION lib CONFIGURATIONS Debug OPTIONAL)
 endif()
 
 #------------------------------------------------------------------------
