@@ -19,11 +19,13 @@
 
 cmake_minimum_required (VERSION 2.8.12)
 
+cmake_policy(SET CMP0048 NEW)
+
 set(LIB_NAME tidy)
 set(LIBTIDY_DESCRIPTION "${LIB_NAME} - HTML syntax checker")
 set(LIBTIDY_URL "https://www.html-tidy.org")
 
-project (${LIB_NAME})
+project (${LIB_NAME} VERSION 5.9.20 LANGUAGES C)
 
 
 #################################################
@@ -156,14 +158,18 @@ endif ()
 #   Enable building with logs, some memory diagnostics.
 #------------------------------------------------------------------------
 option( ENABLE_DEBUG_LOG    "Set ON to output debugging messages."          OFF )
+option( DISABLE_DEBUG_LOG   "Set ON to force disable debug messages."       OFF )
 option( ENABLE_ALLOC_DEBUG  "Set ON to output node allocation diagnostics." OFF )
 option( ENABLE_MEMORY_DEBUG "Set ON to output some memory diagnostics."     OFF )
 
-if ( ENABLE_DEBUG_LOG )
+if ( DISABLE_DEBUG_LOG )
+    add_definitions( -DDISABLE_DEBUG_LOG )
+    message(STATUS "*** Debug Logging is disabled.")
+elseif ( ENABLE_DEBUG_LOG )
     add_definitions( -DENABLE_DEBUG_LOG )
-    message(STATUS "*** Debug Logging is enabled.")  
+    message(STATUS "*** Debug Logging is enabled.")
 else ()
-    message(STATUS "*** Debug Logging is NOT enabled.")  
+    message(STATUS "*** Debug Logging is NOT enabled.")
 endif ()
 
 if (ENABLE_ALLOC_DEBUG)
@@ -397,9 +403,10 @@ endif ()
 # Static Library
 #   The static library always builds.
 #------------------------------------------------------------------------
+include(GNUInstallDirs)
+set(TARGETS_EXPORT_NAME "${PROJECT_NAME}Targets")
 set(name tidy-static)
 add_library ( ${name} STATIC ${CFILES} ${HFILES} ${LIBHFILES} )
-target_include_directories( ${name} PUBLIC "${PROJECT_SOURCE_DIR}/include")
 if (WIN32)
     set_target_properties( ${name} PROPERTIES 
                            OUTPUT_NAME ${LIB_NAME}_static ) 
@@ -412,11 +419,13 @@ if (NOT TIDY_CONSOLE_SHARED) # user wants default static linkage
     list ( APPEND add_LIBS ${name} )
 endif ()    
 install(TARGETS ${name}
-        RUNTIME DESTINATION ${BIN_INSTALL_DIR}
-        ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
-        LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+        EXPORT ${TARGETS_EXPORT_NAME}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         )
-install( FILES ${HFILES} DESTINATION ${INCLUDE_INSTALL_DIR} )
+install( FILES ${HFILES} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME} )
 
 #------------------------------------------------------------------------
 # Dynamic Library
@@ -428,7 +437,6 @@ if (BUILD_SHARED_LIB)
         set(CMAKE_MACOSX_RPATH 1)
     endif ()
     add_library ( ${name} SHARED ${CFILES} ${HFILES} ${LIBHFILES} )
-    target_include_directories( ${name} PUBLIC "${PROJECT_SOURCE_DIR}/include")
     set_target_properties( ${name} PROPERTIES 
                                    OUTPUT_NAME ${LIB_NAME} )
     set_target_properties( ${name} PROPERTIES
@@ -699,5 +707,39 @@ install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/${LIB_NAME}.pc"
     DESTINATION "${LIB_INSTALL_DIR}/pkgconfig"
     )
+
+#------------------------------------------------------------------------
+# Export
+#------------------------------------------------------------------------
+
+include(CMakePackageConfigHelpers)
+
+set(CONFIG_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
+set(GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+set(VERSION_CONFIG "${GENERATED_DIR}/${PROJECT_NAME}ConfigVersion.cmake")
+set(PROJECT_CONFIG "${GENERATED_DIR}/${PROJECT_NAME}Config.cmake")
+set(TARGETS_EXPORT_NAME "${PROJECT_NAME}Targets")
+set(NAMESPACE "${PROJECT_NAME}::")
+
+write_basic_package_version_file(
+    "${VERSION_CONFIG}" COMPATIBILITY SameMajorVersion
+)
+
+configure_package_config_file(
+    "Config.cmake.in"
+    "${PROJECT_CONFIG}"
+    INSTALL_DESTINATION "${CONFIG_INSTALL_DIR}"
+)
+
+install(
+    FILES "${PROJECT_CONFIG}" "${VERSION_CONFIG}"
+    DESTINATION "${CONFIG_INSTALL_DIR}"
+)
+
+install(
+    EXPORT "${TARGETS_EXPORT_NAME}"
+    NAMESPACE "${NAMESPACE}"
+    DESTINATION "${CONFIG_INSTALL_DIR}"
+)
 
 # eof
